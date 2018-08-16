@@ -271,6 +271,7 @@ public class TinyDownloader {
 					String _url = task.getUrl();
 					return _url.substring(_url.lastIndexOf("/")+1, _url.length());
 				});
+				// TODO 返回的文件没有扩展名需要通过Content-Type进行识别处理
 				task.setFilename(filename);
 			}
 			// 文件名处理
