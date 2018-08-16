@@ -5,7 +5,7 @@ goto end
 
 :begin
 java -cp .;lib\*; ga.uuid.app.%~n1
-echo  press any key to exit.
+echo  press any key to exit ~
 pause > nul 2 > nul&exit
 
 :end
