@@ -1,8 +1,6 @@
 package ga.uuid.app;
 
-import static ga.uuid.app.Const.now;
-
-import java.util.Objects;
+import static ga.uuid.app.Const.*;
 
 import ga.uuid.app.TinyDownloader.State;
 
@@ -25,8 +23,8 @@ public class DownloadTask implements Runnable {
 	private transient long lastStamp = 0L; // 上次接收时间
 	
 	public DownloadTask(String url, String path) {
-		Objects.requireNonNull(url, "下载地址不能为空");
-		Objects.requireNonNull(path, "文件保存路径不能为空");
+		requireNonBlank(url, "下载地址不能为空");
+		requireNonBlank(path, "文件保存路径不能为空");
 		this.url = url;
 		path = path.replace('\\', '/');
 		if (path.endsWith("/")) {
@@ -153,7 +151,7 @@ public class DownloadTask implements Runnable {
 		return empty;
 	}
 	
-	private static final DownloadTask empty = new DownloadTask("", "");
+	private static final DownloadTask empty = new DownloadTask(".", ".");
 	
 	@Override
 	public String toString() {

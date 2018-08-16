@@ -16,6 +16,7 @@ import org.nocrala.tools.texttablefmt.Table;
  *
  */
 public interface Const {
+	
 	int MS_CMD = System.getProperty("sun.stdout.encoding", "").startsWith("ms") ? 1 : 0; // 是否运行在MS-CMD中
 	
 	CellStyle right = new CellStyle(HorizontalAlign.right);
@@ -23,6 +24,7 @@ public interface Const {
 	
 	int THREAD_SIZE = 10; // 线程数量 （同时下载文件数）
 	int RETRY_COUNT = 3; // 下载失败重试次数
+	int SAME_ORIGIN_DELAY = 100; // 同源任务延迟毫秒数
 	int OUTPUT_MODE = 1 & MS_CMD; // 0: 统计模式; 1: 实时模式
 	int OUTPUT_INTERVAL = OUTPUT_MODE == 1 ? 128 : 2000; // 输出间隔，毫秒
 	
@@ -51,6 +53,16 @@ public interface Const {
 	
 	static boolean isEmpty(Object obj) {
 		return obj == null || String.valueOf(obj).trim().length() == 0;
+	}
+	
+	static boolean isNotEmpty(Object obj) {
+		return !isEmpty(obj);
+	}
+	
+	static void requireNonBlank(Object obj, String ... message) {
+		if (isEmpty(obj)) {
+			throw new NullPointerException(message.length > 0 ? message[0] : null);
+		}
 	}
 	
 	static void delay(int millis) {

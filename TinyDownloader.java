@@ -1,8 +1,6 @@
 package ga.uuid.app;
 
-import static ga.uuid.app.Const.delay;
-import static ga.uuid.app.Const.isEmpty;
-import static ga.uuid.app.Const.renderTable;
+import static ga.uuid.app.Const.*;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -21,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -39,7 +38,7 @@ public class TinyDownloader {
 	// 正在下载的任务
 	private static final FixedList<DownloadTask> downloadingList = new FixedList<>(Const.THREAD_SIZE);
 	
-	// 统计
+	// 统计 [LongAdder 替代 AtomicLong ]
 	private static LongAdder successCount = new LongAdder();
 	private static LongAdder failCount = new LongAdder();
 	private static LongAdder skipCount = new LongAdder();
@@ -50,6 +49,9 @@ public class TinyDownloader {
 	// 实时下载总字节数统计，为了性能不使用同步，允许些许误差 （统计可能比实际小）
 	private static transient int allBytes = 0;
 	private static transient int bytesPerSecond = 0;
+	
+	// 同源任务下载检测
+	private static transient Map<String, Long> sameOrigin = new ConcurrentHashMap<>();
 	
 	static {
 		// 统计映射
@@ -63,7 +65,6 @@ public class TinyDownloader {
 				try {
 					Runnable task = taskQueue.take();
 					pool.execute(task);
-					delay(100); // 任务之间插入延迟避免同源任务导致503
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -87,7 +88,7 @@ public class TinyDownloader {
 			boolean recoveredConsole = false;
 			ThreadPoolExecutor _pool = (ThreadPoolExecutor) pool;
 			// 统计总览
-			for (;;) {
+			while (!pool.isTerminated()) {
 				delay(Const.OUTPUT_INTERVAL);
 				int activeCount = _pool.getActiveCount();
 				// 当前有下载任务才进行输出
@@ -106,18 +107,18 @@ public class TinyDownloader {
 				}
 			}
 		}, "statistics_thread");
-		statisticsThread.setDaemon(true);
+//		statisticsThread.setDaemon(true);
 		statisticsThread.start();
 		
 		// 下载总速度监控线程
 		Thread networkMonitorThread = new Thread(() -> {
-			for (;;) {
+			while (!pool.isTerminated()) {
 				delay(1000);
 				bytesPerSecond = allBytes;
 				allBytes = 0;
 			}
 		}, "network_monitor_thread");
-		networkMonitorThread.setDaemon(true);
+//		networkMonitorThread.setDaemon(true);
 		networkMonitorThread.start();
 	}
 	
@@ -200,6 +201,8 @@ public class TinyDownloader {
 		
 		try {
 			url = new URL(task.getUrl());
+			// origin checked. (with delay)
+			verifyOrigin(url.getHost());
 			conn = (HttpURLConnection) url.openConnection();
 			conn.setConnectTimeout(30000);  
             conn.setReadTimeout(30000);
@@ -264,6 +267,28 @@ public class TinyDownloader {
 	}
 	
 	/**
+	 * 同源任务检查，mapper 中存在那么给予 100 ms 延迟下载，避免 503
+	 * @param host
+	 */
+	private static void verifyOrigin(String host) {
+		synchronized (host.intern()) {
+			long now = Const.now();
+			Long last = sameOrigin.get(host);
+			if (last == null) {
+				sameOrigin.put(host, now + SAME_ORIGIN_DELAY);
+				return;
+			}
+			Optional.of(last)
+					.filter(l -> l > now)
+					.ifPresent(l -> {
+						sameOrigin.put(host, l + SAME_ORIGIN_DELAY);
+						delay((int) (l - now));
+//						System.out.println(System.currentTimeMillis() + " : " + host + " -> " + (l - now));
+					});
+		}
+	}
+
+	/**
 	 * 通过headers解析出文件名
 	 * @param map the headers map.
 	 * @return
@@ -317,7 +342,7 @@ public class TinyDownloader {
 	 */
 	private static StringBuilder statisticsInfo() {
 		StringBuilder sb = new StringBuilder("\n speed: ");
-		sb.append(Const.speed(bytesPerSecond));
+		sb.append(Const.speed(bytesPerSecond == 0 ? allBytes : bytesPerSecond));
 		sb.append("  success: ").append(successCount);
 		sb.append("  fail: ").append(failCount);
 		sb.append("  skip: ").append(skipCount);
