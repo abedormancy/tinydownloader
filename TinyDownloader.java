@@ -128,7 +128,9 @@ public class TinyDownloader {
 				if (activeCount > 0) {
 					recoveredConsole = false;
 					StringBuilder sb = statisticsInfo();
-					sb.append("  pending: ").append(_pool.getTaskCount() - _pool.getCompletedTaskCount());
+					long pending = _pool.getTaskCount() - _pool.getCompletedTaskCount();
+					if (!start) pending -= 1;
+					sb.append("  pending: ").append(pending);
 					output(sb, consumer);
 				} else {
 					if (!recoveredConsole) {
