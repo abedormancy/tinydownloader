@@ -19,7 +19,7 @@ public interface Const {
 	
 	int MS_CMD = System.getProperty("sun.stdout.encoding", "").startsWith("ms") ? 1 : 0; // 是否运行在MS-CMD中
 	
-	CellStyle right = new CellStyle(HorizontalAlign.right);
+	CellStyle right = new CellStyle(HorizontalAlign.right); // table 样式
 	CellStyle center = new CellStyle(HorizontalAlign.center);
 	
 	int THREAD_SIZE = 10; // 线程数量 （同时下载文件数）
@@ -27,11 +27,12 @@ public interface Const {
 	int SAME_ORIGIN_DELAY = 100; // 同源任务延迟毫秒数
 	int OUTPUT_MODE = 1 & MS_CMD; // 0: 统计模式; 1: 实时模式
 	int OUTPUT_INTERVAL = OUTPUT_MODE == 1 ? 128 : 2000; // 输出间隔，毫秒
+	int DOWNLOAD_TIMEOUT = 3000; // 下载任务连接超时时间
 	
 	
 	int PROGRESS_BAR_LENGTH = 20; // 进度条长度
-	Map<Integer, String> UNFINISHED_MAPPER = initMapperCache('.', 20);
-	Map<Integer, String> FINISHED_MAPPER = initMapperCache('>', 20);
+	Map<Integer, String> UNFINISHED_MAPPER = initMapperCache('.'); // 未下载样式百分比映射
+	Map<Integer, String> FINISHED_MAPPER = initMapperCache('>'); // 已下载百分比样式映射
 	
 	/**
 	 * 初始化进度条缓存字符
@@ -39,9 +40,13 @@ public interface Const {
 	 * @param length 长度
 	 * @return
 	 */
-	static Map<Integer, String> initMapperCache(char ch, int length) {
+	static Map<Integer, String> initMapperCache(char ch) {
+		return initMapperCache(ch, PROGRESS_BAR_LENGTH);
+	}
+	
+	static Map<Integer, String> initMapperCache(char ch, int number) {
 		Map<Integer, String> mapper = new HashMap<>();
-		IntStream.rangeClosed(0, length).forEach(x -> {
+		IntStream.rangeClosed(0, number).forEach(x -> {
 			StringBuilder sb = new StringBuilder();
 			for (int i = 0; i < x; i++) {
 				sb.append(ch);
@@ -63,6 +68,16 @@ public interface Const {
 		if (isEmpty(obj)) {
 			throw new NullPointerException(message.length > 0 ? message[0] : null);
 		}
+	}
+	
+	static String rep2empty(String filename) {
+//		return filename.replaceAll("[<>*|?\\\"/\\\\:]", "_");
+		char[] cs = "<>*|?\"/\\:".toCharArray();
+		for (char c : cs) {
+			if (filename.indexOf(c) != -1) 
+				filename = filename.replace(c, '_');
+		}
+		return filename;
 	}
 	
 	static void delay(int millis) {
@@ -148,5 +163,15 @@ public interface Const {
 			}
 		}
 		return t.render();
+	}
+	
+	static String serial(int value) {
+//		Map<Integer, String> mapper = initMapperCache('0', 4);
+		int len = 4 - String.valueOf(value).length();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < len; i++) {
+			sb.append(0);
+		}
+		return sb.append(value).toString();
 	}
 }

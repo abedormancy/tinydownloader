@@ -22,6 +22,8 @@ public class DownloadTask implements Runnable {
 	private transient int speed = 0; // 实时下载速度 字节/秒
 	private transient long lastStamp = 0L; // 上次接收时间
 	
+	private transient int serial = -1; // 序号
+	
 	public DownloadTask(String url, String path) {
 		requireNonBlank(url, "下载地址不能为空");
 		requireNonBlank(path, "文件保存路径不能为空");
@@ -47,7 +49,7 @@ public class DownloadTask implements Runnable {
 		State state = State.FAIL;
 		beginStamp = now();
 		lastStamp = beginStamp;
-		for (;state == State.FAIL && retryCount <= Const.RETRY_COUNT; retryCount++) {
+		for (;state == State.FAIL && retryCount <= RETRY_COUNT; retryCount++) {
 			state = TinyDownloader.download(this);
 		}
 		if (state == State.SUCCESS) {
@@ -72,6 +74,11 @@ public class DownloadTask implements Runnable {
 	}
 	public String getFilename() {
 		return filename;
+	}
+	public String getFilenameWithSerial() {
+		if (serial == -1) return filename;
+		
+		return String.join("_", serial(serial), filename);
 	}
 	public void setFilename(String filename) {
 		this.filename = filename;
@@ -108,7 +115,13 @@ public class DownloadTask implements Runnable {
 	public void setRetryCount(int retryCount) {
 		this.retryCount = retryCount;
 	}
-	
+	public int getSerial() {
+		return serial;
+	}
+	public void setSerial(int serial) {
+		this.serial = serial;
+	}
+
 	/**
 	 * 下载所用时间，单位 毫秒
 	 * @return
@@ -155,6 +168,6 @@ public class DownloadTask implements Runnable {
 	
 	@Override
 	public String toString() {
-		return ">>" + filename + " ["+Const.prettySize(receivedSize)+"/"+Const.prettySize(filesize)+"] speed: " + Const.speed(speed) ;
+		return ">>" + filename + " ["+prettySize(receivedSize)+"/"+prettySize(filesize)+"] speed: " + speed(speed) ;
 	}
 }

@@ -10,16 +10,20 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -29,14 +33,25 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+
 
 public class TinyDownloader {
 	
-	private static final ExecutorService pool = Executors.newFixedThreadPool(Const.THREAD_SIZE);
+	// 固定线程池，线程池大小即为同时下载任务数 
+	private static final ExecutorService pool = Executors.newFixedThreadPool(THREAD_SIZE);
 	// 等待添加的任务队列
 	private static final BlockingDeque<Runnable> taskQueue = new LinkedBlockingDeque<>();
 	// 正在下载的任务
-	private static final FixedList<DownloadTask> downloadingList = new FixedList<>(Const.THREAD_SIZE);
+	private static final FixedList<DownloadTask> downloadingList = new FixedList<>(THREAD_SIZE);
 	
 	// 统计 [LongAdder 替代 AtomicLong ]
 	private static LongAdder successCount = new LongAdder();
@@ -44,16 +59,34 @@ public class TinyDownloader {
 	private static LongAdder skipCount = new LongAdder();
 	private static final Map<State, LongAdder> counterMap = new HashMap<>();
 	
+	// 类加载后即为下载开启状态
 	private static transient boolean start = true;
 	
 	// 实时下载总字节数统计，为了性能不使用同步，允许些许误差 （统计可能比实际小）
 	private static transient int allBytes = 0;
 	private static transient int bytesPerSecond = 0;
 	
-	// 同源任务下载检测
-	private static transient Map<String, Long> sameOrigin = new ConcurrentHashMap<>();
+	// 同源任务下载检测 (不打算对其进行同步，不打算释放其内容) [key: host, value: visittime]
+//	private static transient Map<String, Long> sameOrigin = new ConcurrentHashMap<>();
+	private static transient Map<String, Long> sameOrigin = new HashMap<>();
+	
+	private static transient LongAdder currentSerial = new LongAdder(); 
+	
+	private static TrustManager[] tm = { new TrustAnyTrustManager() };
+    private static SSLContext sc;
+    private static TrustAnyHostnameVerifier tv = new TrustAnyHostnameVerifier();
+    
+    private static Map<String, String> requestHeaders = new HashMap<>();
 	
 	static {
+		
+		try {
+			sc = SSLContext.getInstance("SSL", "SunJSSE");
+			sc.init(null, tm, new java.security.SecureRandom());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		// 统计映射
 		counterMap.put(State.SUCCESS, successCount);
 		counterMap.put(State.FAIL, failCount);
@@ -73,9 +106,9 @@ public class TinyDownloader {
 		}, "monitor thread").start();
 		
 		// 统计线程
-		Thread statisticsThread = new Thread(() -> {
+		new Thread(() -> {
 			Consumer<StringBuilder> consumer = null;
-			if (Const.OUTPUT_MODE == 1) {
+			if (OUTPUT_MODE == 1) {
 				consumer = s -> {
 					// 附加实时下载任务数据
 					s.append("\n").append(renderTable(downloadingList));
@@ -89,7 +122,7 @@ public class TinyDownloader {
 			ThreadPoolExecutor _pool = (ThreadPoolExecutor) pool;
 			// 统计总览
 			while (!pool.isTerminated()) {
-				delay(Const.OUTPUT_INTERVAL);
+				delay(OUTPUT_INTERVAL);
 				int activeCount = _pool.getActiveCount();
 				// 当前有下载任务才进行输出
 				if (activeCount > 0) {
@@ -106,28 +139,25 @@ public class TinyDownloader {
 					recoveredConsole = true;
 				}
 			}
-		}, "statistics_thread");
-//		statisticsThread.setDaemon(true);
-		statisticsThread.start();
+		}, "statistics_thread").start();
 		
 		// 下载总速度监控线程
-		Thread networkMonitorThread = new Thread(() -> {
+		new Thread(() -> {
 			while (!pool.isTerminated()) {
 				delay(1000);
 				bytesPerSecond = allBytes;
 				allBytes = 0;
 			}
-		}, "network_monitor_thread");
-//		networkMonitorThread.setDaemon(true);
-		networkMonitorThread.start();
+		}, "network_monitor_thread").start();
 	}
 	
 	/**
 	 * 确认下载任务，确认后不能再通过add方法添加下载任务
+	 * 在确认没有新的下载任务时，显示调用此方法来保证程序能正常退出
 	 */
 	public static void ensure() {
 		if (start) {
-			// 如果下载任务队列中不为空的话，等待消耗完毕后才设置状态
+			// 如果下载任务队列中不为空的话，等待下载队列消耗完毕后才设置状态
 			while (!taskQueue.isEmpty()) {
 				delay(100);
 			}
@@ -155,6 +185,11 @@ public class TinyDownloader {
 	public static void add(String url, String path, String filename) {
 		if (start) {
 			DownloadTask task = new DownloadTask(url, path, filename);
+			// 如果文件名为空 ，自动为其增加下载序列前缀
+			if (isEmpty(filename)) {
+				task.setSerial(currentSerial.intValue());
+				currentSerial.increment();
+			}
 			taskQueue.add(task);
 		} else {
 			// TODO else 任务队列已关闭
@@ -188,7 +223,7 @@ public class TinyDownloader {
 	
 	/**
 	 * 下载文件简单实现 ，buff中直接保存文件所有字节，下载完后写入磁盘
-	 * 不支持断点续传，不推荐大文件下载
+	 * 不支持断点续传，主要用于爬取的图片等小文件下载，不推荐大文件下载
 	 * @param task
 	 * @return
 	 */
@@ -196,17 +231,38 @@ public class TinyDownloader {
 		Objects.requireNonNull(task);
 		
 		URL url = null;
-		HttpURLConnection conn = null;
+		URLConnection conn = null;
 		String destFile = "";
+		final boolean isHttps = task.getUrl().toLowerCase().startsWith("https://");
 		
 		try {
 			url = new URL(task.getUrl());
 			// origin checked. (with delay)
 			verifyOrigin(url.getHost());
-			conn = (HttpURLConnection) url.openConnection();
-			conn.setConnectTimeout(30000);  
-            conn.setReadTimeout(30000);
-            conn.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/" + Math.random());
+			if (isHttps) {
+				conn = (HttpsURLConnection) url.openConnection();
+				((HttpsURLConnection) conn).setSSLSocketFactory(sc.getSocketFactory());
+				((HttpsURLConnection) conn).setHostnameVerifier(tv);
+			} else {
+				conn = (HttpURLConnection) url.openConnection();
+			}
+			conn.setConnectTimeout(DOWNLOAD_TIMEOUT);  
+			conn.setReadTimeout(DOWNLOAD_TIMEOUT);
+			conn.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36" + Math.random());
+			
+			// 设置用户自定义的 request header
+			if (requestHeaders.size() > 0) {
+				Set<Entry<String, String>> es = requestHeaders.entrySet();
+				Iterator<Entry<String, String>> iterator = es.iterator();
+				while (iterator.hasNext()) {
+					Entry<String, String> next = iterator.next();
+					conn.setRequestProperty(next.getKey(), next.getValue());
+				}
+//				requestHeaders.forEach((key, value) -> {
+//					conn.setRequestProperty(key, value);
+//				});
+			}
+			
 			// 下载任务中的文件名未指定的话，那么通过 header 获取，如果 header 中未获取成功那么通过 url 截取
 			if (isEmpty(task.getFilename())) {
 				Map<String, List<String>> headers = conn.getHeaderFields();
@@ -217,6 +273,9 @@ public class TinyDownloader {
 				});
 				task.setFilename(filename);
 			}
+			// 文件名处理
+			task.setFilename(rep2empty(task.getFilename()));
+			
 			// 下载目录如果不存在，那么创建该目录
 			Path directory = Paths.get(task.getPath());
 			if (Files.notExists(directory)) {
@@ -225,13 +284,13 @@ public class TinyDownloader {
 				}
 			}
 			
-			destFile = String.join("/", task.getPath(), task.getFilename());
+			destFile = String.join("/", task.getPath(), task.getFilenameWithSerial());
 			// 检查当前文件是否存在，如果存在那么跳过
 			Path path = Paths.get(destFile);
 			if (Files.exists(path)) {
 				if (Files.size(path) > 0) return State.EXISTED;
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			// TODO
 			e.printStackTrace();
 		}
@@ -272,7 +331,7 @@ public class TinyDownloader {
 	 */
 	private static void verifyOrigin(String host) {
 		synchronized (host.intern()) {
-			long now = Const.now();
+			long now = now();
 			Long last = sameOrigin.get(host);
 			if (last == null) {
 				sameOrigin.put(host, now + SAME_ORIGIN_DELAY);
@@ -342,7 +401,7 @@ public class TinyDownloader {
 	 */
 	private static StringBuilder statisticsInfo() {
 		StringBuilder sb = new StringBuilder("\n speed: ");
-		sb.append(Const.speed(bytesPerSecond == 0 ? allBytes : bytesPerSecond));
+		sb.append(speed(bytesPerSecond == 0 ? allBytes : bytesPerSecond));
 		sb.append("  success: ").append(successCount);
 		sb.append("  fail: ").append(failCount);
 		sb.append("  skip: ").append(skipCount);
@@ -353,6 +412,15 @@ public class TinyDownloader {
 		consumer.accept(t);
 	}
 	
+	public static void setRequestHeaders(Map<String, String> headers) {
+		Objects.requireNonNull(headers);
+		requestHeaders = headers;
+	}
+	
+	public static void setRequestHeader(String key, String value) {
+		requestHeaders.put(key, value);
+	}
+	
 	/**
 	 * 任务下载状态
 	 * @author abeholder
@@ -360,5 +428,22 @@ public class TinyDownloader {
 	 */
 	static enum State {
 		SUCCESS, FAIL, EXISTED;
+	}
+	
+	
+	private static class TrustAnyTrustManager implements X509TrustManager {
+		public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {}
+
+		public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {}
+
+		public X509Certificate[] getAcceptedIssuers() {
+			return new X509Certificate[] {};
+		}
+	}
+
+	private static class TrustAnyHostnameVerifier implements HostnameVerifier {
+		public boolean verify(String hostname, SSLSession session) {
+			return true;
+		}
 	}
 }
