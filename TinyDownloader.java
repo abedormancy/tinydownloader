@@ -73,10 +73,10 @@ public class TinyDownloader {
 	private static transient LongAdder currentSerial = new LongAdder(); 
 	
 	private static TrustManager[] tm = { new TrustAnyTrustManager() };
-    private static SSLContext sc;
-    private static TrustAnyHostnameVerifier tv = new TrustAnyHostnameVerifier();
-    
-    private static Map<String, String> requestHeaders = new HashMap<>();
+	private static SSLContext sc;
+	private static TrustAnyHostnameVerifier tv = new TrustAnyHostnameVerifier();
+	
+	private static Map<String, String> requestHeaders = new HashMap<>();
 	
 	static {
 		

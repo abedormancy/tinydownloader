@@ -16,6 +16,6 @@ public interface User32 extends Library {
 	int SetConsoleActiveScreenBuffer(int hwnd);
 	int SetConsoleScreenBufferSize(int hwnd, int size);
 	int WriteConsoleA(int hwnd, String text, int size, int lpNumberOfCharsWritten, Object flags);
-    int FlushConsoleInputBuffer(int hwnd);
-    int SetConsoleTitleA(String title);
+	int FlushConsoleInputBuffer(int hwnd);
+	int SetConsoleTitleA(String title);
 }
