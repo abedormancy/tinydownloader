@@ -7,4 +7,4 @@
 windows & jdk >= 1.8
 
 1. run `compile.cmd`
-2. drag the executable java file to the `drag2run.cmd` or run directly to see the Test 
+2. drag the executable java file to the `drag2run.cmd` or run directly to see the Demo
