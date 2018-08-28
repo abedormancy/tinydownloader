@@ -7,7 +7,6 @@ import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -241,6 +240,7 @@ public class TinyDownloader {
 			url = new URL(task.getUrl());
 			// origin checked. (with delay)
 			verifyOrigin(url.getHost());
+			
 			if (isHttps) {
 				conn = (HttpsURLConnection) url.openConnection();
 				((HttpsURLConnection) conn).setSSLSocketFactory(sc.getSocketFactory());
@@ -299,33 +299,39 @@ public class TinyDownloader {
 		}
 		
 		// 下载文件的简单实现
-		try (	InputStream in = new BufferedInputStream(conn.getInputStream());
-				FileOutputStream fos = new FileOutputStream(destFile);
-				OutputStream out = new BufferedOutputStream(fos);) {
+		try (InputStream in = new BufferedInputStream(conn.getInputStream())) {
 			task.setFilesize(conn.getContentLength());
 			if (task.getFilesize() < 1) {
 				// TODO
 				return State.FAIL;
 			}
+//			ByteArrayOutputStream bos = new ByteArrayOutputStream(task.getFilesize());
 			byte[] binary = new byte[task.getFilesize()];
 			byte[] buff = new byte[65536];
 			int len = -1;
 			int index = 0;
 			while ((len = in.read(buff)) != -1) {
+//				bos.write(buff, 0, len);
 				System.arraycopy(buff, 0, binary, index, len);
 				index += len;
 				task.setReceivedSize(index);
-//				downloadingList.stream().map(DownloadTask::getReceivedSize).
+				// downloadingList.stream().map(DownloadTask::getReceivedSize).
 				allBytes += len; // 用于统计全局速度
 			}
-			out.write(binary);
-			out.flush();
+			writeFile(binary, destFile);
 		} catch (IOException e) {
 			// TODO
 			e.printStackTrace();
 			return State.FAIL;
 		}
 		return State.SUCCESS;
+	}
+	
+	private static void writeFile(byte[] bytes, String file) throws IOException {
+		try (FileOutputStream fos = new FileOutputStream(file);
+				BufferedOutputStream bos = new BufferedOutputStream(fos)) {
+			bos.write(bytes);
+		}
 	}
 	
 	/**
