@@ -2,7 +2,6 @@ package ga.uuid.app;
 
 import static ga.uuid.app.Const.*;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,6 +9,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -293,30 +293,29 @@ public class TinyDownloader {
 			if (Files.exists(path)) {
 				if (Files.size(path) > 0) return State.EXISTED;
 			}
-		} catch (Exception e) {
+		} catch (IOException e) {
+			if (e.getClass() == FileSystemException.class) {
+				throw new RuntimeException(e);
+			}
 			// TODO
 			e.printStackTrace();
 		}
 		
 		// 下载文件的简单实现
-		try (InputStream in = new BufferedInputStream(conn.getInputStream())) {
+		try (InputStream in = conn.getInputStream()) {
 			task.setFilesize(conn.getContentLength());
 			if (task.getFilesize() < 1) {
 				// TODO
 				return State.FAIL;
 			}
-//			ByteArrayOutputStream bos = new ByteArrayOutputStream(task.getFilesize());
 			byte[] binary = new byte[task.getFilesize()];
-			byte[] buff = new byte[65536];
-			int len = -1;
+			int buf = 8192 << 1, size = binary.length;
 			int index = 0;
-			while ((len = in.read(buff)) != -1) {
-//				bos.write(buff, 0, len);
-				System.arraycopy(buff, 0, binary, index, len);
+			while (index < size) {
+				int len = in.read(binary,  index, size - index > buf ? buf : size - index);
 				index += len;
 				task.setReceivedSize(index);
-				// downloadingList.stream().map(DownloadTask::getReceivedSize).
-				allBytes += len; // 用于统计全局速度
+				allBytes += len;
 			}
 			writeFile(binary, destFile);
 		} catch (IOException e) {

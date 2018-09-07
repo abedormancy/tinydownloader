@@ -10,7 +10,7 @@ public class Demo {
 		try {
 			Files.lines(Paths.get("./urls.txt"))
 				.filter(Const::isNotEmpty)
-				.forEach(url -> TinyDownloader.add(url, "R:/dudulu_demo"));
+				.forEach(url -> TinyDownloader.add(url, "d:/tinydownloader_demo"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

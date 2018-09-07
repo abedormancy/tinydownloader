@@ -31,7 +31,7 @@ public interface Const {
 	
 	
 	int PROGRESS_BAR_LENGTH = 20; // 进度条长度
-	Map<Integer, String> UNFINISHED_MAPPER = initMapperCache('.'); // 未下载样式百分比映射
+	Map<Integer, String> UNFINISHED_MAPPER = initMapperCache('='); // 未下载样式百分比映射
 	Map<Integer, String> FINISHED_MAPPER = initMapperCache('>'); // 已下载百分比样式映射
 	
 	/**
@@ -155,10 +155,15 @@ public interface Const {
 				t.addCell(Const.speed(task.getSpeed()).toString(), right);
 			} else {
 				if (task == DownloadTask.empty()) { // none
-					t.addCell("-", center, 5);
+//					t.addCell("-", center, 5);
+					t.addCell("", 2);
+					t.addCell("-", center);
+					t.addCell("", 2);
 				} else { // connecting
 					t.addCell(String.valueOf(seq++), center);
-					t.addCell("connecting ...", center, 4);
+					t.addCell("");
+					t.addCell("connecting ...", center);
+					t.addCell("", 2);
 				}
 			}
 		}

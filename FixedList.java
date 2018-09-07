@@ -108,36 +108,36 @@ public class FixedList<E> implements Collection<E> {
 	
 	@Override
 	public boolean contains(Object o) {
-		return false;
+		throw new UnsupportedOperationException();
 	}
 	
 	@Override
 	public Object[] toArray() {
-		return null;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public <T> T[] toArray(T[] a) {
-		return null;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean containsAll(Collection<?> c) {
-		return false;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean addAll(Collection<? extends E> c) {
-		return false;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean removeAll(Collection<?> c) {
-		return false;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean retainAll(Collection<?> c) {
-		return false;
+		throw new UnsupportedOperationException();
 	}
 }
