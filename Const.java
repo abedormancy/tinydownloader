@@ -1,19 +1,21 @@
 package ga.uuid.app;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 import org.nocrala.tools.texttablefmt.BorderStyle;
 import org.nocrala.tools.texttablefmt.CellStyle;
 import org.nocrala.tools.texttablefmt.CellStyle.HorizontalAlign;
+
+import ga.uuid.app.util.FixedList;
+
 import org.nocrala.tools.texttablefmt.ShownBorders;
 import org.nocrala.tools.texttablefmt.Table;
 
 /**
- * 一些配置及静态方法~
+ * 
+ * <b>Description:</b><br> 
+ * 一些配置和静态辅助方法
  * @author abeholder
- *
  */
 public interface Const {
 	
@@ -31,29 +33,41 @@ public interface Const {
 	
 	
 	int PROGRESS_BAR_LENGTH = 20; // 进度条长度
-	Map<Integer, String> UNFINISHED_MAPPER = initMapperCache('='); // 未下载样式百分比映射
-	Map<Integer, String> FINISHED_MAPPER = initMapperCache('>'); // 已下载百分比样式映射
-	
+	String[] UNFINISHED_MAPPER = initMapperCache('-'); // 未下载样式百分比样式
+	String[] FINISHED_MAPPER = initMapperCache('='); // 已下载百分比样式
+	String[] SERIAL_MAPPER = initMapperCache('0', 4);
 	/**
-	 * 初始化进度条缓存字符
-	 * @param ch 字符
-	 * @param length 长度
+	 * 
+	 * <b>Description:</b><br> 
+	 * 初始化进度条缓存
+	 * @param ch
 	 * @return
+	 * <b>Author:</b> abeholder
 	 */
-	static Map<Integer, String> initMapperCache(char ch) {
-		return initMapperCache(ch, PROGRESS_BAR_LENGTH);
+	static String[] initMapperCache(char ch) {
+		String[] result = initMapperCache(ch, PROGRESS_BAR_LENGTH);
+		
+		// custom
+		if ("=".equals(result[1])) {
+			for (int i = 1; i < result.length; i++) {
+				StringBuilder sb = new StringBuilder(result[i]);
+				sb.setCharAt(i - 1, '>');
+				result[i] = sb.toString();
+			}
+		}
+		return result;
 	}
 	
-	static Map<Integer, String> initMapperCache(char ch, int number) {
-		Map<Integer, String> mapper = new HashMap<>();
+	static String[] initMapperCache(char ch, int number) {
+		String[] result = new String[number + 1];
 		IntStream.rangeClosed(0, number).forEach(x -> {
-			StringBuilder sb = new StringBuilder();
+			StringBuilder sb = new StringBuilder(x);
 			for (int i = 0; i < x; i++) {
 				sb.append(ch);
 			}
-			mapper.put(x, sb.toString());
+			result[x] = sb.toString();
 		});
-		return mapper;
+		return result;
 	}
 	
 	static boolean isEmpty(Object obj) {
@@ -84,7 +98,7 @@ public interface Const {
 		try {
 			Thread.sleep(millis);
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			Thread.currentThread().interrupt();
 		}
 	}
 	
@@ -108,10 +122,10 @@ public interface Const {
 	}
 	
 	static Table table() {
-		Table t = new Table(5, BorderStyle.DESIGN_PAPYRUS, ShownBorders.SURROUND_HEADER_AND_COLUMNS);
+		Table t = new Table(5, BorderStyle.CLASSIC, ShownBorders.SURROUND_HEADER_AND_COLUMNS);
 		t.setColumnWidth(0, 2, 2);
 		t.setColumnWidth(1, 32, 32);
-		t.setColumnWidth(2, PROGRESS_BAR_LENGTH, PROGRESS_BAR_LENGTH);
+		t.setColumnWidth(2, PROGRESS_BAR_LENGTH + 2, PROGRESS_BAR_LENGTH + 2);
 		t.setColumnWidth(3, 10, 10);
 		t.setColumnWidth(4, 16, 16);
 		t.addCell("#", center);
@@ -131,9 +145,9 @@ public interface Const {
 		if (percent < 0) percent = 0f;
 		
 		int v = (int) (percent  * PROGRESS_BAR_LENGTH) ;
-		String finished = FINISHED_MAPPER.get(v);
-		String unfinished = UNFINISHED_MAPPER.get(PROGRESS_BAR_LENGTH - v);
-		return new StringBuilder().append(finished).append(unfinished).toString();
+		String finished = FINISHED_MAPPER[v];
+		String unfinished = UNFINISHED_MAPPER[PROGRESS_BAR_LENGTH - v];
+		return new StringBuilder(PROGRESS_BAR_LENGTH).append(finished).append(unfinished).toString();
 	}
 	
 	/**
@@ -156,14 +170,17 @@ public interface Const {
 			} else {
 				if (task == DownloadTask.empty()) { // none
 //					t.addCell("-", center, 5);
-					t.addCell("", 2);
+					t.addCell("");
+					t.addCell("");
 					t.addCell("-", center);
-					t.addCell("", 2);
+					t.addCell("");
+					t.addCell("");
 				} else { // connecting
 					t.addCell(String.valueOf(seq++), center);
 					t.addCell("");
 					t.addCell("connecting ...", center);
-					t.addCell("", 2);
+					t.addCell("");
+					t.addCell("");
 				}
 			}
 		}
@@ -171,12 +188,11 @@ public interface Const {
 	}
 	
 	static String serial(int value) {
-//		Map<Integer, String> mapper = initMapperCache('0', 4);
-		int len = 4 - String.valueOf(value).length();
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < len; i++) {
-			sb.append(0);
-		}
-		return sb.append(value).toString();
+		int max = SERIAL_MAPPER.length - 1;
+		int len = max - ((int) Math.log10(value) + 1);
+		if (len < max && len > 0) {
+			return SERIAL_MAPPER[len] + value;
+		} return String.valueOf(value);
+//		return String.format("%04d", value);
 	}
 }

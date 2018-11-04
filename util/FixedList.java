@@ -1,4 +1,4 @@
-package ga.uuid.app;
+package ga.uuid.app.util;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -29,10 +29,11 @@ public class FixedList<E> implements Collection<E> {
 	
 	@Override
 	public boolean add(E e) {
-		if (freeCursor < fixedCapacity) {
-			element[freeCursor++] = e;
+		element[freeCursor++] = e;
+		if (freeCursor >= fixedCapacity) {
+			freeCursor = 0;
 		}
-		return false;
+		return true;
 	}
 	
 	@SuppressWarnings("unchecked")

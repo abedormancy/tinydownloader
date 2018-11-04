@@ -2,8 +2,6 @@ package ga.uuid.app;
 
 import static ga.uuid.app.Const.*;
 
-import ga.uuid.app.TinyDownloader.State;
-
 public class DownloadTask implements Runnable {
 	
 	private String url; // 下载地址

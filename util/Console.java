@@ -1,5 +1,11 @@
-package ga.uuid.app;
+package ga.uuid.app.util;
 
+/**
+ * 
+ * <b>Description:</b><br> 
+ * 控制台
+ * @author abeholder
+ */
 public class Console {
 	
 	private static User32 user32 = User32.INSTANCE;
@@ -12,7 +18,7 @@ public class Console {
 		throw new UnsupportedOperationException();
 	}
 	
-	static void print(String text) {
+	public static void print(String text) {
 		if (text != null && lastText.equals(text)) return;
 		lastText = text;
 		

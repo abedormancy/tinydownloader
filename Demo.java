@@ -8,9 +8,9 @@ public class Demo {
 	
 	public static void main(String[] args) {
 		try {
-			Files.lines(Paths.get("./urls.txt"))
+			Files.lines(Paths.get("./resources/urls.txt"))
 				.filter(Const::isNotEmpty)
-				.forEach(url -> TinyDownloader.add(url, "d:/tinydownloader_demo"));
+				.forEach(url -> TinyDownloader.add(url, "r:/tinydownloader_demo"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
