@@ -398,13 +398,11 @@ public class TinyDownloader {
 		String filename = null;
 		try {
 			String disposition = map.get("Content-Disposition").get(0);
-			Pattern pattern = Pattern.compile("(filename\\*?)=([^;]+)");
+			Pattern pattern = Pattern.compile("(filename\\*?)=([^;\"\\S']+)");
 			Matcher matcher = pattern.matcher(disposition);
 			while (matcher.find()) {
 				filename = matcher.group(2);
-				if ("filename*".equals(matcher.group(1))) {
-					break;
-				}
+				if ("filename*".equals(matcher.group(1))) break;
 			}
 		} catch (NullPointerException e) {}
 		if (isEmpty(filename)) filename = null; 
@@ -454,7 +452,8 @@ public class TinyDownloader {
 	 * <b>Author:</b> abeholder
 	 */
 	private static StringBuilder statisticsInfo() {
-		StringBuilder sb = new StringBuilder("\n speed: ");
+		StringBuilder sb = new StringBuilder(2048);
+		sb.append("\n\tspeed: ");
 		sb.append(speed(bytesPerSecond == 0 ? allBytes : bytesPerSecond));
 		sb.append("  success: ").append(successCount);
 		sb.append("  fail: ").append(failCount);

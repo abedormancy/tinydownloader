@@ -16,8 +16,8 @@ public class FixedList<E> implements Collection<E> {
 	private Object[] element;
 	// 列表固定容量
 	private int fixedCapacity;
-	// 当前空元素游标位置
-	private transient int freeCursor = 0;
+	
+	private Stack stack;
 	
 	public FixedList(int capacity) {
 		if (capacity < 1) {
@@ -25,14 +25,15 @@ public class FixedList<E> implements Collection<E> {
 		}
 		fixedCapacity = capacity;
 		element = new Object[fixedCapacity];
+		stack = new Stack();
+		for (int i = capacity - 1; i >= 0; i--) {
+			stack.push(i);
+		}
 	}
 	
 	@Override
 	public boolean add(E e) {
-		element[freeCursor++] = e;
-		if (freeCursor >= fixedCapacity) {
-			freeCursor = 0;
-		}
+		element[stack.pop()] = e;
 		return true;
 	}
 	
@@ -48,13 +49,13 @@ public class FixedList<E> implements Collection<E> {
 	
 	@Override
 	public boolean remove(Object o) {
-		if (o == null) return true;
-		
-		for (int i = 0; i < fixedCapacity; i++) {
-			if (o.equals(element[i])) {
-				element[i] = null;
-				if (i < freeCursor) freeCursor = i;
-				return true;
+		if (o != null) {
+			for (int i = 0; i < fixedCapacity; i++) {
+				if (o.equals(element[i])) {
+					element[i] = null;
+					stack.push(i);
+					return true;
+				}
 			}
 		}
 		return false;
@@ -140,5 +141,22 @@ public class FixedList<E> implements Collection<E> {
 	@Override
 	public boolean retainAll(Collection<?> c) {
 		throw new UnsupportedOperationException();
+	}
+	
+	private class Stack {
+		
+		private int[] indexs = new int[fixedCapacity];
+		private int top = -1;
+		
+		public boolean push(int index) {
+			if (top >= indexs.length - 1) top = -1;
+			indexs[++top] = index;
+			return true;
+		}
+
+		public int pop() {
+			if (top < 0) top = indexs.length - 1;
+			return indexs[top--];
+		}
 	}
 }

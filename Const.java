@@ -28,7 +28,7 @@ public interface Const {
 	int RETRY_COUNT = 3; // 下载失败重试次数
 	int SAME_ORIGIN_DELAY = 100; // 同源任务延迟毫秒数
 	int OUTPUT_MODE = 1 & MS_CMD; // 0: 统计模式; 1: 实时模式
-	int OUTPUT_INTERVAL = OUTPUT_MODE == 1 ? 128 : 2000; // 输出间隔，毫秒
+	int OUTPUT_INTERVAL = OUTPUT_MODE == 1 ? 64 : 2000; // 输出间隔，毫秒
 	int DOWNLOAD_TIMEOUT = 3000; // 下载任务连接超时时间
 	
 	
@@ -124,10 +124,10 @@ public interface Const {
 	static Table table() {
 		Table t = new Table(5, BorderStyle.CLASSIC, ShownBorders.SURROUND_HEADER_AND_COLUMNS);
 		t.setColumnWidth(0, 2, 2);
-		t.setColumnWidth(1, 32, 32);
+		t.setColumnWidth(1, 38, 38);
 		t.setColumnWidth(2, PROGRESS_BAR_LENGTH + 2, PROGRESS_BAR_LENGTH + 2);
 		t.setColumnWidth(3, 10, 10);
-		t.setColumnWidth(4, 16, 16);
+		t.setColumnWidth(4, 12, 12);
 		t.addCell("#", center);
 		t.addCell("filename", center);
 		t.addCell("percent", center);
@@ -188,11 +188,11 @@ public interface Const {
 	}
 	
 	static String serial(int value) {
-		int max = SERIAL_MAPPER.length - 1;
-		int len = max - ((int) Math.log10(value) + 1);
-		if (len < max && len > 0) {
-			return SERIAL_MAPPER[len] + value;
-		} return String.valueOf(value);
-//		return String.format("%04d", value);
+//		int max = SERIAL_MAPPER.length - 1;
+//		int len = max - ((int) Math.log10(value) + 1);
+//		if (len < max && len > 0) {
+//			return SERIAL_MAPPER[len] + value;
+//		} return String.valueOf(value);
+		return String.format("%04d", value);
 	}
 }
