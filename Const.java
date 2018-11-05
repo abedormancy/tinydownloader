@@ -1,4 +1,4 @@
-package ga.uuid.app;
+package ga.uuid.tinydownload;
 
 import java.util.stream.IntStream;
 
@@ -6,10 +6,10 @@ import org.nocrala.tools.texttablefmt.BorderStyle;
 import org.nocrala.tools.texttablefmt.CellStyle;
 import org.nocrala.tools.texttablefmt.CellStyle.HorizontalAlign;
 
-import ga.uuid.app.util.FixedList;
-
 import org.nocrala.tools.texttablefmt.ShownBorders;
 import org.nocrala.tools.texttablefmt.Table;
+
+import ga.uuid.tinydownload.util.FixedList;
 
 /**
  * 

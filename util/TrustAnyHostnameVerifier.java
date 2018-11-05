@@ -1,4 +1,4 @@
-package ga.uuid.app.util;
+package ga.uuid.tinydownload.util;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSession;

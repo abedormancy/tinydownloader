@@ -1,4 +1,4 @@
-package ga.uuid.app;
+package ga.uuid.tinydownload;
 
 /**
  * 

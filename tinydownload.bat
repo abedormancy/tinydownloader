@@ -5,7 +5,7 @@ goto end
 
 :txt
 cd /d %~dp0
-java -cp .;lib\*; ga.uuid.app.Demo "%~f1"
+java -cp .;./lib/*;./bin; ga.uuid.tinydownload.App "%~f1"
 echo.
 echo 	press any key to exit
 pause>nul&EXIT

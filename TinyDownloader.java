@@ -1,6 +1,6 @@
-package ga.uuid.app;
+package ga.uuid.tinydownload;
 
-import static ga.uuid.app.Const.*;
+import static ga.uuid.tinydownload.Const.*;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
@@ -34,10 +34,10 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
-import ga.uuid.app.util.Console;
-import ga.uuid.app.util.FixedList;
-import ga.uuid.app.util.TrustAnyHostnameVerifier;
-import ga.uuid.app.util.TrustAnyTrustManager;
+import ga.uuid.tinydownload.util.Console;
+import ga.uuid.tinydownload.util.FixedList;
+import ga.uuid.tinydownload.util.TrustAnyHostnameVerifier;
+import ga.uuid.tinydownload.util.TrustAnyTrustManager;
 
 public class TinyDownloader {
 	

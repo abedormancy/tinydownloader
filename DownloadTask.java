@@ -1,6 +1,6 @@
-package ga.uuid.app;
+package ga.uuid.tinydownload;
 
-import static ga.uuid.app.Const.*;
+import static ga.uuid.tinydownload.Const.*;
 
 public class DownloadTask implements Runnable {
 	
