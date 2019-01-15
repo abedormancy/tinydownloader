@@ -314,17 +314,14 @@ public class TinyDownloader {
 	 * <b>Author:</b> abeholder
 	 */
 	private static boolean existFile(String filepath) throws IOException {
-		// 检查当前文件是否存在，如果存在那么跳过
 		Path path = Paths.get(filepath);
-		if (Files.exists(path)) {
-			return Files.size(path) > 0;
-		} return false;
+		return Files.exists(path) && Files.size(path) > 0;
 	}
 
 	/**
 	 * 
 	 * <b>Description:</b><br> 
-	 * 如果路径不存在那么创建
+	 * 创建对应的文件夹
 	 * @param task
 	 * @throws IOException
 	 * <b>Author:</b> abeholder
@@ -333,7 +330,8 @@ public class TinyDownloader {
 		Path directory = Paths.get(task.getPath());
 		if (Files.notExists(directory)) {
 			synchronized (TinyDownloader.class) {
-				if (Files.notExists(directory)) Files.createDirectories(directory);
+				if (Files.notExists(directory)) 
+					Files.createDirectories(directory);
 			}
 		}
 	}

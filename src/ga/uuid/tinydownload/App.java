@@ -5,8 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class App {
@@ -15,24 +15,24 @@ public class App {
 		try {
 			if (args.length != 0) {
 				Path urlPath = Paths.get(args[0]);
-				Set<String> urls = Files.readAllLines(urlPath, StandardCharsets.UTF_8)
+				List<String> urls = Files.readAllLines(urlPath, StandardCharsets.UTF_8)
 										.stream()
 										.map(s -> s.split("[,;\\s]"))
 										.flatMap(Arrays::stream)
 										.filter(App::isNotEmpty)
-										.collect(Collectors.toSet());
+										.distinct()
+										.collect(Collectors.toList());
 				if (urls.size() > 0) {
 					System.out.println("\n\n\n\tunique_count: " + urls.size());
-					String result = readLine("\n\t下载到: ");
+					String result = readLine("\n\tsave to: ");
 					Path directory = null;
 					
 					if (isEmpty(result)) {
 						directory = urlPath.getParent();
 					} else directory = Paths.get(result);
 					
-					if (Files.notExists(directory)) {
-						if (Files.notExists(directory)) Files.createDirectories(directory);
-					}
+					if (Files.notExists(directory)) Files.createDirectories(directory);
+					
 					String folder = directory.toString();
 					urls.forEach(url -> {
 						TinyDownloader.add(url, folder);
